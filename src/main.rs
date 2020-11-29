@@ -16,15 +16,12 @@ fn main() {
     println!("Hello, world!");
 }
 
-mod id {
-    
-}
-
 mod processor {
     use crate::roles::*;
 
     pub struct Processor {
         roles: Roles,
+        others: Vec<RemoteProcessor>,
     }
 
     pub struct Roles {
@@ -34,9 +31,25 @@ mod processor {
         learner: Option<Learner>,
         leader: Option<Leader>,
     }
+
+    struct Id(u128);
+
+    pub struct RemoteProcessor {
+        id: Id,
+        client: bool,
+        acceptor: bool,
+        proposor: bool,
+        learner: bool,
+        leader: bool,
+    }
+
+
 }
 
 mod roles {
+
+    pub struct Value(u32);
+    pub struct ProposalNumber(u128);
 
     /// The Client issues a request to the distributed system, and waits for a
     /// response. For instance, a write request on a file in a distributed file
@@ -47,13 +60,16 @@ mod roles {
     /// are collected into groups called Quorums. Any message sent to an Acceptor
     /// must be sent to a Quorum of Acceptors. Any message received from an Acceptor
     /// is ignored unless a copy is received from each Acceptor in a Quorum.
-    pub struct Acceptor; /* Voter */
+    pub struct Acceptor {
+        pub (crate) highest_proposal_number: ProposalNumber,
+        pub (crate) last_accepted: Option<(ProposalNumber, Value)>;
+    }
 
     /// A Proposer advocates a client request, attempting to convince the Acceptors
     /// to agree on it, and acting as a coordinator to move the protocol forward
     /// when conflicts occur.
     pub struct Proposer {
-        next_prepare_number: u128,
+        pub (crate) next_proposal_number: ProposalNumber,
     }
 
     /// Learners act as the replication factor for the protocol. Once a Client
@@ -73,7 +89,13 @@ mod roles {
 
 mod basic_paxos {
 
-    
+    use crate::roles::*;
+
+    enum Message {
+        Prepare(PrepareMessage),
+    }
+
+    struct PrepareMessage(ProposalNumber);
     
     enum BasicPaxosRound {
         Phase1(BasicPaxosRoundPhase1),
@@ -90,4 +112,30 @@ mod basic_paxos {
         Phase2B_Accepted,
     }
 
+    trait BasicProposer {
+        fn create_prepare_msg(&mut self) -> Message;
+    }
+
+    impl BasicProposer for Proposer {
+        fn create_prepare_msg(&mut self) -> PrepareMessage {
+            let number = self.next_prepare_number;
+            self.next_prepare_number += 1;
+            PrepareMsg(ProposalNumber(number))
+        }
+    }
+
+    trait BasicAcceptor {
+        fn handle_prepare_msg(&mut self, msg: PrepareMsg) -> HandlePrepareResult {
+            panic!()
+        }
+    }
+
+    enum HandlePrepareResult {
+        Promise(Promise),
+    }
+
+    struct Promise {
+        
+    }
+    
 }
